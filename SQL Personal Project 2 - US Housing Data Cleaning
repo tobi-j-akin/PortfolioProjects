@@ -1,0 +1,157 @@
+/*
+
+CLEANING DATA IN SQL USING QUERIES 
+
+*/
+--------------------------------------------------------------------------------------------------------------------------------
+-- Data format standarisation 
+
+SELECT 
+	SaleDate, CONVERT(DATE, SaleDate) Date_yy_mm_dd, saleDateConverted
+FROM 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	SaleDate = CONVERT(DATE, SaleDate) -- Update table saleDate column to DATE data type
+
+	-- NOT WORKING, USE ALTER INSTEAD  
+ALTER TABLE [Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+Add SaleDateConverted Date; -- Added column 
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	saleDateConverted = CONVERT(DATE, SaleDate) -- Update new column
+
+--------------------------------------------------------------------------------------------------------------------------------
+-- Population of property address data 
+
+SELECT
+	*
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+--WHERE
+	--PropertyAddress IS NULL
+ORDER BY
+	ParcelID
+SELECT
+	a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL(a.PropertyAddress, b.PropertyAddress) needed
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$ a
+JOIN 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$ b -- Joining same table together 
+		ON a.ParcelID = b.ParcelID 
+		AND a.[UniqueID ] <> b.[UniqueID ]
+WHERE 
+	a.PropertyAddress IS NULL
+UPDATE 
+	a
+SET 
+  PropertyAddress = ISNULL(a.PropertyAddress, b.PropertyAddress)
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$ a
+JOIN 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$ b 
+		ON a.ParcelID = b.ParcelID 
+		AND a.[UniqueID ] <> b.[UniqueID ]
+WHERE 
+	a.PropertyAddress IS NULL -- Removes previous nulls from PropertyAddress column with appropriate addresses
+
+--------------------------------------------------------------------------------------------------------------------------------
+-- Breaking out Address into individual columns (Address, City, State)
+
+SELECT
+	PropertyAddress
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+SELECT 
+	SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress) -1) Address
+	, SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) + 1, LEN(PropertyAddress)) City 
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$ 
+ALTER TABLE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ADD 
+	PropertySplitAddress varchar(200); -- Added column 
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	PropertySplitAddress = SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress) -1) -- Update new column
+ALTER TABLE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ADD 
+	PropertySplitCity varchar(50); -- Added column  
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	PropertySplitCity = SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) + 1, LEN(PropertyAddress)) -- Update new column
+SELECT 
+	PropertySplitAddress
+	, PropertySplitCity
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+SELECT
+	OwnerAddress
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+SELECT 
+	PARSENAME(REPLACE(OwnerAddress, ',', '.') ,3)
+	,PARSENAME(REPLACE(OwnerAddress, ',', '.') ,2)
+	,PARSENAME(REPLACE(OwnerAddress, ',', '.') ,1)
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ALTER TABLE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ADD 
+	OwnerSplitAddress varchar(200); -- Added column 
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	OwnerSplitAddress = PARSENAME(REPLACE(OwnerAddress, ',', '.') ,3)
+ALTER TABLE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ADD 
+	OwnerSplitCity varchar(50); -- Added column 
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	OwnerSplitCity = PARSENAME(REPLACE(OwnerAddress, ',', '.') ,2)
+ALTER TABLE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+ADD 
+	OwnerSplitState varchar(5); -- Added column 
+Update
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$  
+SET
+	OwnerSplitState = PARSENAME(REPLACE(OwnerAddress, ',', '.') ,1)
+SELECT 
+	OwnerSplitAddress,
+	OwnerSplitCity,
+	OwnerSplitState
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+--------------------------------------------------------------------------------------------------------------------------------
+-- Changing Y and N to Yes and No in "Sold in Vacant" 
+
+SELECT 
+	DISTINCT (SoldAsVacant)
+	, COUNT(SoldAsVacant)
+FROM
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+
+GROUP BY
+	SoldAsVacant
+UPDATE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+SET 
+	SoldAsVacant = 'Yes'
+WHERE
+	SoldAsVacant = 'Y'
+
+UPDATE 
+	[Portfolio Project 2 - US Housing Data Cleaning].dbo.Sheet1$
+SET 
+	SoldAsVacant = 'No'
+WHERE
+	SoldAsVacant = 'N'
